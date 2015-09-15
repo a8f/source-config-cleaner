@@ -7,17 +7,14 @@ def Main():
     parser.add_argument('file', type=argparse.FileType('r'), nargs='+')
     parser.add_argument("-v", "--verbose", help = "Log operations verbosely", action ="store_true")
     parser.add_argument("-cl", "--cleanlines", help = "Remove empty lines from output file", action = "store_true")
-    #parser.add_argument("-r", "--recursive", help = "Run cleaner recursively on executed config files", action="store_true")
+    parser.add_argument("-r", "--recursive", help = "Run cleaner recursively on executed config files", action="store_true")
     args = parser.parse_args()
     
-    global overwrite, verbose, rm_empty_lines, recursive
+    global verbose, rm_empty_lines, recursive
 
     verbose = args.verbose
-    rm_empty_lines = args.cleanlines    
-    
-    # TODO recursive mode
-    #recursive = args.recursive
-    overwrite = False
+    rm_empty_lines = args.cleanlines
+    recursive = args.recursive
     
     if not os.path.exists("output"):
         os.makedirs("output")
@@ -82,6 +79,19 @@ def parseFile(infile):
                     loaded_files[arg] = lineNo
                     if verbose:
                         print "New file " + arg + " added"
+                    if recursive:
+                        # TODO add protection for infinite recursion
+                        # including configs that exec themselves and
+                        # config a execing config b which itself execs config a
+                        # add ./ to prevent files in subfolders being opened in /
+                        try:
+                            print "Recursively cleaning " + arg + ".cfg"                            
+                            rec_file = open("./" + arg + ".cfg")
+                            parseFile(rec_file)
+                            rec_file.close()
+                        except IOError as e:
+                            print "Couldn't open " + arg + ".cfg: {0}".format(e.strerror)
+                            
             else:
                 output.append(line)
         except IndexError:
